@@ -147,7 +147,17 @@ tr:hover td{background:var(--surf2)}
 .demo-bar{background:var(--amb-lt);border:1px solid var(--amb-bd);border-radius:var(--r);padding:11px 15px;margin-bottom:1.25rem;font-size:13px;color:var(--amb);line-height:1.6;display:none}
 .demo-bar code{font-family:'DM Mono',monospace;font-size:11px;background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px}
 
-/* REMINDERS */
+/* BULK LOAN */
+.bulk-card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:1rem;overflow:hidden}
+.bulk-card-head{padding:.9rem 1.1rem;border-bottom:1px solid var(--bdr);display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bulk-card-title{font-size:14px;font-weight:600;color:var(--text)}
+.bulk-card-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.bulk-purpose{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#eff4ff;color:var(--blue);border:1px solid var(--blue-bd);margin-top:4px}
+.bulk-item-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.bulk-item-row select{flex:1;padding:6px 8px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:inherit;font-size:13px;background:var(--surf);color:var(--text)}
+.bulk-item-row input{padding:6px 8px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:inherit;font-size:13px;background:var(--surf);color:var(--text)}
+
+
 .reminders{margin-bottom:1.25rem}
 .reminder-card{border-radius:var(--r);padding:1rem 1.2rem;margin-bottom:.6rem;border:1px solid}
 .reminder-card.overdue{background:var(--red-lt);border-color:var(--red-bd)}
@@ -259,6 +269,9 @@ tr:hover td{background:var(--surf2)}
     <button class="nav-btn" onclick="goSec('search',this)">
       <span class="icon">🔍</span> Search
     </button>
+    <button class="nav-btn" onclick="goSec('bulk',this)">
+      <span class="icon">📦</span> Bulk Loan
+    </button>
     <button class="nav-btn" onclick="goSec('calendar',this)">
       <span class="icon">📅</span> Calendar
     </button>
@@ -340,6 +353,15 @@ tr:hover td{background:var(--surf2)}
       <div id="global-search-results"></div>
     </div>
 
+    <!-- BULK LOAN -->
+    <div id="sec-bulk" class="sec">
+      <div class="page-head">
+        <div><h2>Bulk Loan</h2><p>Loan multiple items to the same party in one go</p></div>
+        <button class="btn pri" onclick="openBulkLoanModal()">＋ New Bulk Loan</button>
+      </div>
+      <div id="bulk-list"></div>
+    </div>
+
     <!-- ALL ITEMS -->
     <div id="sec-inventory" class="sec">
       <div class="page-head">
@@ -356,6 +378,34 @@ tr:hover td{background:var(--surf2)}
 
   </div><!-- /content -->
 </div><!-- /layout -->
+
+<!-- BULK LOAN MODAL -->
+<div class="modal-overlay" id="modal-bulk">
+  <div class="modal" style="max-width:520px">
+    <h3>📦 New Bulk Loan</h3>
+    <div class="fg-grid c2">
+      <div class="fg"><label>Party *</label><input id="bl-person"></div>
+      <div class="fg"><label>Contact</label><input id="bl-contact"></div>
+    </div>
+    <div class="fg"><label>Coy</label><input id="bl-location"></div>
+    <div class="fg"><label>Purpose (Which conduct?) *</label><input id="bl-purpose" placeholder="Which conduct?"></div>
+    <div class="fg-grid c2">
+      <div class="fg"><label>Loan Date *</label><input type="date" id="bl-date"></div>
+      <div class="fg"><label>Return By * <span style="font-size:10px;color:var(--t3);font-weight:400">(applies to all items)</span></label><input type="date" id="bl-ret" onchange="syncBulkRetDate()"></div>
+    </div>
+    <div style="margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.05em">Items to Loan</div>
+    <div style="display:flex;gap:6px;font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding:0 2px;margin-bottom:4px">
+      <span style="flex:1">Item *</span><span style="width:60px">Qty *</span><span style="width:120px">Return By *</span><span style="width:28px"></span>
+    </div>
+    <div id="bl-items-list"></div>
+    <button class="btn sm" style="margin-bottom:10px;width:100%" onclick="addBulkItem()">＋ Add Item</button>
+    <div class="fg" style="margin-bottom:4px"><label>Notes</label><input id="bl-notes"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-bulk')">Cancel</button>
+      <button class="btn pri" onclick="saveBulkLoan()">Submit Bulk Loan</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADD/EDIT ITEM MODAL -->
 <div class="modal-overlay" id="modal-item">
@@ -397,7 +447,7 @@ tr:hover td{background:var(--surf2)}
     <div class="fg-grid c3">
       <div class="fg"><label>Qty *</label><input id="mo-qty" type="number" min="1" placeholder="1"></div>
       <div class="fg"><label>Loan Date *</label><input type="date" id="mo-date"></div>
-      <div class="fg"><label>Return By</label><input type="date" id="mo-ret"></div>
+      <div class="fg"><label>Return By *</label><input type="date" id="mo-ret"></div>
     </div>
     <div class="fg" style="margin-bottom:4px"><label>Notes</label><input id="mo-notes" placeholder="Notes"></div>
     <input type="hidden" id="mo-item-id">
@@ -420,7 +470,7 @@ tr:hover td{background:var(--surf2)}
     <div class="fg-grid c3">
       <div class="fg"><label>Qty *</label><input id="mi2-qty" type="number" min="1" placeholder="1"></div>
       <div class="fg"><label>Received Date *</label><input type="date" id="mi2-date"></div>
-      <div class="fg"><label>Return By</label><input type="date" id="mi2-ret"></div>
+      <div class="fg"><label>Return By *</label><input type="date" id="mi2-ret"></div>
     </div>
     <div class="fg" style="margin-bottom:4px"><label>Notes</label><input id="mi2-notes" placeholder="Notes"></div>
     <input type="hidden" id="mi2-item-id">
@@ -443,7 +493,7 @@ tr:hover td{background:var(--surf2)}
     <div class="fg-grid c3">
       <div class="fg"><label>Qty *</label><input id="ic-qty" type="number" min="1"></div>
       <div class="fg"><label>Issue Date *</label><input type="date" id="ic-date"></div>
-      <div class="fg"><label>Return By</label><input type="date" id="ic-ret"></div>
+      <div class="fg"><label>Return By *</label><input type="date" id="ic-ret"></div>
     </div>
     <div class="fg" style="margin-bottom:4px"><label>Notes</label><input id="ic-notes"></div>
     <input type="hidden" id="ic-item-id">
@@ -591,6 +641,7 @@ function render(){
   renderDashTable();
   renderInventoryTable();
   renderCalendar();
+  renderBulkList();
   if(currentItemId) renderItemDetail(currentItemId);
 }
 
@@ -763,12 +814,12 @@ function renderDashTable(q=''){
   const el=document.getElementById('dash-table');
   if(!list.length){ el.innerHTML='<div class="empty">No items yet. Use the sidebar to add your first item type.</div>'; return; }
   let h=`<div class="tbl-wrap"><table><thead><tr>
-    <th>Item</th><th>Cat</th><th>You Own</th><th>Loaned Out</th><th>Borrowed In</th><th>In Store</th><th>Status</th>
+    <th>Item</th><th>Cat</th><th>You Own</th><th>Issued to Cadets</th><th>Loaned Out</th><th>Borrowed In</th><th>In Store</th>
   </tr></thead><tbody>`;
   let lastCat='';
   list.forEach(it=>{
-    const out=qtyOut(it.id),inn=qtyIn(it.id),own=it.owned_qty,store=qtyInStore(it.id);
-    const pct=own>0?Math.min(100,Math.round(out/own*100)):0;
+    const out=qtyOut(it.id),inn=qtyIn(it.id),cadet=qtyCadet(it.id),own=it.owned_qty,store=qtyInStore(it.id);
+    const pct=own>0?Math.min(100,Math.round((out+cadet)/own*100)):0;
     const warn=store<0;
     const cat=it.category||'Other';
     if(cat!==lastCat){
@@ -779,13 +830,10 @@ function renderDashTable(q=''){
       <td class="td-n">${e(it.name)}</td>
       <td>${catBadge(it.category)}</td>
       <td class="td-mono">${own}</td>
-      <td>
-        <span class="td-mono">${out}</span>
-        ${out>0?`<div class="prog-bar" style="width:70px"><div class="prog-bar-fill${pct>=90?' warn':''}" style="width:${pct}%"></div></div>`:''}
-      </td>
+      <td class="td-mono" style="color:#6d28d9;font-weight:600">${cadet>0?cadet:'0'}</td>
+      <td class="td-mono">${out}</td>
       <td class="td-mono">${inn>0?`<span style="color:var(--green)">${inn}</span>`:'0'}</td>
       <td><span class="td-mono" style="font-size:15px;font-weight:600;color:${warn?'var(--red)':store===0?'var(--amb)':'var(--green)'}">${store}</span></td>
-      <td>${warn?'<span class="badge b-warn">Deficit</span>':store===0?'<span class="badge b-soon">Empty</span>':'<span class="badge b-ok">OK</span>'}</td>
     </tr>`;
   });
   el.innerHTML=h+'</tbody></table></div>';
@@ -1231,13 +1279,13 @@ function openBorrowIn(itemId){
 async function saveLoan(dir){
   const pfx=dir==='out'?'mo':'mi2';
   const itemId=parseInt(document.getElementById(pfx+'-item-id').value);
-  const person=val(pfx+'-person'), qty=parseInt(val(pfx+'-qty')||'0'), date=val(pfx+'-date');
-  if(!person||!qty||!date){ toast('Please fill in Name, Qty, and Date.'); return; }
+  const person=val(pfx+'-person'), qty=parseInt(val(pfx+'-qty')||'0'), date=val(pfx+'-date'), ret=val(pfx+'-ret');
+  if(!person||!qty||!date||!ret){ toast('Please fill in Name, Qty, Date and Return By.'); return; }
   const row={
     item_id:itemId, direction:dir, person_name:person,
     contact:val(pfx+'-contact')||null,
     location:val(pfx+'-location')||null,
-    qty, loan_date:date, return_date:val(pfx+'-ret')||null,
+    qty, loan_date:date, return_date:ret,
     notes:val(pfx+'-notes')||null, returned:false, returned_on:null
   };
   if(DEMO){ row.id=Date.now(); row.created_at=new Date().toISOString(); loans.unshift(row); persist(); }
@@ -1262,15 +1310,15 @@ function openIssueCadet(itemId){
 async function saveIssueCadet(){
   const itemId=parseInt(document.getElementById('ic-item-id').value);
   const name=val('ic-name'), platoon=val('ic-platoon');
-  const qty=parseInt(val('ic-qty')||'0'), date=val('ic-date');
-  if(!name||!platoon||!qty||!date){ toast('Please fill in Name, Platoon and Date.'); return; }
+  const qty=parseInt(val('ic-qty')||'0'), date=val('ic-date'), ret=val('ic-ret');
+  if(!name||!platoon||!qty||!date||!ret){ toast('Please fill in Name, Platoon, Date and Return By.'); return; }
   const contactNum=val('ic-contact');
   const notes=val('ic-notes');
   const combinedNotes=[contactNum?'Contact: '+contactNum:'', notes].filter(Boolean).join(' | ')||null;
   const row={
     item_id:itemId, direction:'cadet', person_name:name,
     contact:val('ic-contact')||null, location:platoon,
-    qty, loan_date:date, return_date:val('ic-ret')||null,
+    qty, loan_date:date, return_date:ret,
     notes:combinedNotes, returned:false, returned_on:null
   };
   if(DEMO){ row.id=Date.now(); row.created_at=new Date().toISOString(); loans.unshift(row); persist(); }
@@ -1376,7 +1424,204 @@ function persist(){
 let tt;
 function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove('show'),3000); }
 
-// ── Export ────────────────────────────────────────────
+// ── Bulk Loan ──────────────────────────────────────────
+let bulkItemCount = 0;
+
+function openBulkLoanModal(){
+  ['bl-person','bl-contact','bl-location','bl-purpose','bl-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('bl-date').value=today();
+  document.getElementById('bl-ret').value='';
+  document.getElementById('bl-items-list').innerHTML='';
+  bulkItemCount=0;
+  addBulkItem();
+  openModal('modal-bulk');
+}
+function syncBulkRetDate(){
+  // When global Return By changes, update all existing item rows
+  const ret=document.getElementById('bl-ret')?.value||'';
+  for(let i=1;i<=bulkItemCount;i++){
+    const el=document.getElementById('bl-ret-item-'+i);
+    if(el) el.value=ret;
+  }
+}
+
+function addBulkItem(){
+  bulkItemCount++;
+  const id=bulkItemCount;
+  const opts=items.map(it=>`<option value="${it.id}">${e(it.name)}</option>`).join('');
+  const globalRet=document.getElementById('bl-ret')?.value||'';
+  const row=document.createElement('div');
+  row.className='bulk-item-row';
+  row.id='bl-item-row-'+id;
+  row.innerHTML=`
+    <select id="bl-item-${id}" style="flex:1"><option value="">— Select item —</option>${opts}</select>
+    <input id="bl-qty-${id}" type="number" min="1" value="1" style="width:60px">
+    <input id="bl-ret-item-${id}" type="date" value="${globalRet}" style="width:120px">
+    <button class="btn del" style="flex-shrink:0" onclick="document.getElementById('bl-item-row-${id}').remove()">✕</button>
+  `;
+  document.getElementById('bl-items-list').appendChild(row);
+}
+
+async function saveBulkLoan(){
+  const person=val('bl-person'), purpose=val('bl-purpose'), date=val('bl-date'), ret=val('bl-ret');
+  if(!person||!purpose||!date||!ret){toast('Fill in Party, Purpose, Loan Date and Return By.');return;}
+
+  const rows=[];
+  for(let i=1;i<=bulkItemCount;i++){
+    const itemEl=document.getElementById('bl-item-'+i);
+    const qtyEl=document.getElementById('bl-qty-'+i);
+    const retEl=document.getElementById('bl-ret-item-'+i);
+    if(!itemEl||!qtyEl) continue;
+    const itemId=parseInt(itemEl.value), qty=parseInt(qtyEl.value||'1');
+    const itemRet=retEl?.value||ret;
+    if(!itemId) continue;
+    if(!itemRet){toast('Return By date is required for each item.');return;}
+    rows.push({itemId,qty,ret:itemRet});
+  }
+  if(!rows.length){toast('Add at least one item.');return;}
+
+  const bulkId='bulk-'+Date.now();
+  const contact=val('bl-contact'), location=val('bl-location');
+  const notes=val('bl-notes')||null;
+
+  for(const r of rows){
+    const row={
+      item_id:r.itemId, direction:'out', person_name:person,
+      contact:contact||null, location:location||null,
+      qty:r.qty, loan_date:date, return_date:r.ret, notes:notes,
+      returned:false, returned_on:null,
+      bulk_id:bulkId, bulk_purpose:purpose
+    };
+    if(DEMO){
+      row.id=Date.now()+Math.random();
+      row.created_at=new Date().toISOString();
+      loans.unshift(row);
+    } else {
+      const{data,error}=await sb.from('loans').insert(row).select().single();
+      if(error){toast('Error: '+error.message);return;}
+      loans.unshift(data);
+    }
+  }
+  if(DEMO) persist();
+  closeModal('modal-bulk');
+  render();
+  toast(`✓ Bulk loan saved — ${rows.length} item${rows.length>1?'s':''}`);
+}
+
+async function returnBulkLoan(idx){
+  const bulkId=window._bulkIds?.[idx];
+  if(!bulkId){toast('Error: bulk ID not found.');return;}
+  if(!confirm('Mark all items in this bulk loan as returned?')) return;
+  const tod=today();
+  const toReturn=loans.filter(l=>l.bulk_id===bulkId&&!l.returned);
+  if(!toReturn.length){toast('No active items to return.');return;}
+  for(const l of toReturn){
+    if(DEMO){
+      const i=loans.findIndex(x=>x.id===l.id);
+      if(i>-1){loans[i].returned=true;loans[i].returned_on=tod;}
+    } else {
+      const{error}=await sb.from('loans').update({returned:true,returned_on:tod}).eq('id',l.id);
+      if(error){toast('Error: '+error.message);return;}
+      const i=loans.findIndex(x=>x.id===l.id);
+      if(i>-1){loans[i].returned=true;loans[i].returned_on=tod;}
+    }
+  }
+  if(DEMO) persist();
+  render();
+  toast(`✓ ${toReturn.length} item${toReturn.length>1?'s':''} marked as returned`);
+}
+window.returnBulkLoan=returnBulkLoan;
+
+async function deleteBulkCard(idx){
+  const bulkId=window._bulkIds?.[idx];
+  if(!bulkId){toast('Error: bulk ID not found.');return;}
+  if(!confirm('Delete this bulk loan entry? The returned records in each item page will be kept.')) return;
+  // Only delete the bulk_id grouping — set bulk_id to null so records remain in item history
+  const toUpdate=loans.filter(l=>l.bulk_id===bulkId);
+  for(const l of toUpdate){
+    if(DEMO){
+      const i=loans.findIndex(x=>x.id===l.id);
+      if(i>-1) loans[i].bulk_id=null;
+    } else {
+      await sb.from('loans').update({bulk_id:null}).eq('id',l.id);
+      const i=loans.findIndex(x=>x.id===l.id);
+      if(i>-1) loans[i].bulk_id=null;
+    }
+  }
+  if(DEMO) persist();
+  render();
+  toast('✓ Bulk loan entry deleted');
+}
+window.deleteBulkCard=deleteBulkCard;
+
+function renderBulkList(){
+  const el=document.getElementById('bulk-list');
+  if(!el) return;
+  // Get all loans with a bulk_id
+  const bulkLoans=loans.filter(l=>l.bulk_id);
+  if(!bulkLoans.length){
+    el.innerHTML='<div class="card"><div class="empty">No bulk loans yet. Click "+ New Bulk Loan" to start.</div></div>';
+    return;
+  }
+
+  // Group by bulk_id
+  const groups={};
+  bulkLoans.forEach(l=>{
+    if(!groups[l.bulk_id]) groups[l.bulk_id]=[];
+    groups[l.bulk_id].push(l);
+  });
+
+  // Sort groups by most recent first
+  const sorted=Object.entries(groups).sort((a,b)=>{
+    const da=a[1][0].loan_date, db=b[1][0].loan_date;
+    return da<db?1:-1;
+  });
+
+  let html='';
+  // Store bulk IDs in a window array so buttons can reference them safely by index
+  window._bulkIds=[];
+  sorted.forEach(([bulkId,grpLoans],idx)=>{
+    window._bulkIds[idx]=bulkId;
+    const rep=grpLoans[0];
+    const active=grpLoans.filter(l=>!l.returned);
+    const allDone=active.length===0;
+    const tod=today();
+    const overdue=active.filter(l=>l.return_date&&days(tod,l.return_date)<0).length;
+    const statusCol=allDone?'var(--t3)':overdue?'var(--red)':'var(--green)';
+    const statusTxt=allDone?'All Returned':overdue?`${overdue} Overdue`:`${active.length} Active`;
+
+    html+=`<div class="bulk-card">
+      <div class="bulk-card-head">
+        <div>
+          <div class="bulk-card-title">${e(rep.person_name)}${rep.location?' &nbsp;·&nbsp; '+e(rep.location):''}</div>
+          <div class="bulk-card-sub">${rep.contact||''} &nbsp;·&nbsp; Loan Date: ${rep.loan_date}${rep.return_date?' &nbsp;·&nbsp; Return By: '+rep.return_date:''}</div>
+          <div class="bulk-purpose">📋 ${e(rep.bulk_purpose)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:${statusCol}">${statusTxt}</span>
+          ${!allDone?`<button class="btn sm ok" onclick="returnBulkLoan(${idx})">✓ Return All</button>`:''}
+          ${allDone?`<button class="btn del" onclick="deleteBulkCard(${idx})">✕ Delete</button>`:''}
+        </div>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr>
+        <th>Item</th><th>Qty</th><th>Status</th><th>Notes</th>
+      </tr></thead><tbody>`;
+
+    grpLoans.forEach(l=>{
+      const it=items.find(i=>i.id===l.item_id);
+      html+=`<tr>
+        <td style="cursor:pointer;font-weight:500" onclick="openItem(${l.item_id})">${e(it?.name||'Unknown')}</td>
+        <td class="td-mono">${l.qty}</td>
+        <td>${l.returned?`<span class="badge b-done">Returned ${l.returned_on}</span>`:statusBadge(l)}</td>
+        <td class="td-s">${e(l.notes||'—')}</td>
+      </tr>`;
+    });
+
+    html+='</tbody></table></div></div>';
+  });
+
+  el.innerHTML=html;
+}
 function openExportModal(itemId){
   const it=items.find(i=>i.id===itemId);
   document.getElementById('export-item-id').value=itemId;
