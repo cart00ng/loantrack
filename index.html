@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LoanTrack — Inventory & Loan Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const APP_PASSWORD = 'ilovehotel6767';
+function checkPw(){
+  const input=document.getElementById('pw-input').value;
+  if(input===APP_PASSWORD){
+    document.getElementById('pw-screen').style.display='none';
+    if(typeof boot==='function') boot();
+  } else {
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -108,6 +122,7 @@ tr:hover td{background:var(--surf2)}
 .b-in{background:var(--green-lt);color:var(--green);border:1px solid var(--green-bd)}
 .b-od{background:var(--red-lt);color:var(--red);border:1px solid var(--red-bd)}
 .b-soon{background:var(--amb-lt);color:var(--amb);border:1px solid var(--amb-bd)}
+.b-cadet{background:#f5f0ff;color:#6d28d9;border:1px solid #ddd6fe}
 .b-done{background:var(--surf2);color:var(--t3);border:1px solid var(--bdr)}
 .b-warn{background:var(--red-lt);color:var(--red);border:1px solid var(--red-bd)}
 .b-ok{background:var(--green-lt);color:var(--green);border:1px solid var(--green-bd)}
@@ -176,7 +191,9 @@ tr:hover td{background:var(--surf2)}
 .cal-num{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:3px}
 .cal-cell.today-cell .cal-num{color:var(--blue)}
 .cal-dot{font-size:10px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:3px;padding:1px 4px;margin-bottom:2px}
+.cal-dot-row{display:flex;flex-direction:column}
 .cal-dot.out{background:var(--blue-lt);color:var(--blue)}
+.cal-dot.cadet{background:var(--blue-lt);color:var(--blue)}
 .cal-dot.in{background:var(--green-lt);color:var(--green)}
 .cal-dot.od{background:var(--red-lt);color:var(--red)}
 .cal-legend{display:flex;gap:16px;font-size:12px;color:var(--t2);margin-bottom:1rem;flex-wrap:wrap}
@@ -203,7 +220,8 @@ tr:hover td{background:var(--surf2)}
   .content{padding:1rem}
   .fg-grid.c3{grid-template-columns:1fr 1fr}
   .cal-cell{min-height:52px}
-  .cal-dot{display:none}
+  .cal-dot{font-size:0;width:7px;height:7px;border-radius:50%;padding:0;margin:1px 1px 0 0;display:inline-block;vertical-align:top}
+  .cal-dot-row{display:flex;flex-wrap:wrap;gap:1px;margin-top:3px}
 }
 @media(max-width:480px){
   .fg-grid.c3,.fg-grid.c2{grid-template-columns:1fr}
@@ -313,6 +331,7 @@ tr:hover td{background:var(--surf2)}
             <option value="all">All records</option>
             <option value="out">Loans Out only</option>
             <option value="in">Borrows In only</option>
+            <option value="cadet">Cadet Issues only</option>
             <option value="active">Active only</option>
             <option value="returned">History only</option>
           </select>
@@ -412,6 +431,29 @@ tr:hover td{background:var(--surf2)}
   </div>
 </div>
 
+<!-- ISSUE TO CADET MODAL -->
+<div class="modal-overlay" id="modal-cadet">
+  <div class="modal">
+    <h3>🎖 Issue to Cadet</h3>
+    <div class="fg-grid c2">
+      <div class="fg"><label>Cadet Name *</label><input id="ic-name"></div>
+      <div class="fg"><label>Platoon/Section *</label><input id="ic-platoon"></div>
+    </div>
+    <div class="fg"><label>Contact Number</label><input id="ic-contact"></div>
+    <div class="fg-grid c3">
+      <div class="fg"><label>Qty *</label><input id="ic-qty" type="number" min="1"></div>
+      <div class="fg"><label>Issue Date *</label><input type="date" id="ic-date"></div>
+      <div class="fg"><label>Return By</label><input type="date" id="ic-ret"></div>
+    </div>
+    <div class="fg" style="margin-bottom:4px"><label>Notes</label><input id="ic-notes"></div>
+    <input type="hidden" id="ic-item-id">
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('modal-cadet')">Cancel</button>
+      <button class="btn pri" style="background:#6d28d9;border-color:#6d28d9" onclick="saveIssueCadet()">Issue</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT LOAN MODAL -->
 <div class="modal-overlay" id="modal-edit-loan">
   <div class="modal">
@@ -468,9 +510,9 @@ tr:hover td{background:var(--surf2)}
 
 <script>
 /* ══════════════════════════════════════════════════════
-   ▼ FILL IN YOUR SUPABASE DETAILS see SETUP.md
+   ▼ FILL IN YOUR SUPABASE DETAILS (see SETUP.md)
    ══════════════════════════════════════════════════════ */
-const SUPABASE_URL = 'https://xuicauosmsdpsrlnptdi.supabase.co';
+const SUPABASE_URL = 'https://xuicauosmsdpsrlnptdi.supabase.co'';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1aWNhdW9zbXNkcHNybG5wdGRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMzYwOTYsImV4cCI6MjA5NDcxMjA5Nn0.UnRrUDwr1nWYsc5jfUTIlGAXELe-JDA5Hq4MEbwyIrE';
 /* ══════════════════════════════════════════════════════ */
 
@@ -508,8 +550,9 @@ function loansFor(itemId,dir,activeOnly=true){
   return loans.filter(l=>l.item_id===itemId&&l.direction===dir&&(!activeOnly||!l.returned));
 }
 function qtyOut(id){ return loansFor(id,'out').reduce((s,l)=>s+l.qty,0); }
+function qtyCadet(id){ return loansFor(id,'cadet').reduce((s,l)=>s+l.qty,0); }
 function qtyIn(id) { return loansFor(id,'in').reduce((s,l)=>s+l.qty,0); }
-function qtyInStore(id){ return ((items.find(i=>i.id===id)||{}).owned_qty||0) - qtyOut(id) + qtyIn(id); }
+function qtyInStore(id){ return ((items.find(i=>i.id===id)||{}).owned_qty||0) - qtyOut(id) - qtyCadet(id) + qtyIn(id); }
 function today(){ return new Date().toISOString().split('T')[0]; }
 function days(a,b){ return Math.round((new Date(b)-new Date(a))/86400000); }
 function isOverdue(l){ return !l.returned&&l.return_date&&days(today(),l.return_date)<0; }
@@ -521,12 +564,16 @@ function statusBadge(l){
   if(l.returned) return '<span class="badge b-done">Returned</span>';
   if(!l.return_date) return l.direction==='out'
     ? '<span class="badge b-out">Active</span>'
+    : l.direction==='cadet'
+    ? '<span class="badge b-cadet">Active</span>'
     : '<span class="badge b-in">Active</span>';
   const d=days(today(),l.return_date);
   if(d<0) return `<span class="badge b-od">Overdue ${Math.abs(d)}d</span>`;
   if(d<=3) return `<span class="badge b-soon">Due in ${d}d</span>`;
   return l.direction==='out'
     ? `<span class="badge b-out">Due in ${d}d</span>`
+    : l.direction==='cadet'
+    ? `<span class="badge b-cadet">Due in ${d}d</span>`
     : `<span class="badge b-in">Due in ${d}d</span>`;
 }
 
@@ -606,7 +653,7 @@ function renderReminders(){
     overdue.forEach(l=>{
       const it=items.find(i=>i.id===l.item_id);
       const daysOd=Math.abs(days(tod,l.return_date));
-      const dir=l.direction==='out'?'📤 Loaned to':'📥 Borrowed from';
+      const dir=l.direction==='out'?'📤 Loaned to':l.direction==='cadet'?'🎖 Lent to cadet':'📥 Borrowed from';
       html+=`<div class="reminder-row">
         <div>
           <div class="reminder-item">${e(it?.name||'Unknown item')}</div>
@@ -623,7 +670,7 @@ function renderReminders(){
       <div class="reminder-card-title">🟡 Due Tomorrow — ${dueTomorrow.length} item${dueTomorrow.length>1?'s':''}</div>`;
     dueTomorrow.forEach(l=>{
       const it=items.find(i=>i.id===l.item_id);
-      const dir=l.direction==='out'?'📤 Loaned to':'📥 Borrowed from';
+      const dir=l.direction==='out'?'📤 Loaned to':l.direction==='cadet'?'🎖 Lent to cadet':'📥 Borrowed from';
       html+=`<div class="reminder-row">
         <div>
           <div class="reminder-item">${e(it?.name||'Unknown item')}</div>
@@ -644,25 +691,43 @@ function runGlobalSearch(){
   const el=document.getElementById('global-search-results');
   if(!el) return;
 
-  if(!q){ el.innerHTML='<div class="card"><div class="empty">Type a name, company, contact or item above to search.</div></div>'; return; }
+  // Show prompt only when no query AND filter is 'all'
+  if(!q && filter==='all'){
+    el.innerHTML='<div class="card"><div class="empty">Type a name, company, contact or item above to search — or select a filter to browse all records.</div></div>';
+    return;
+  }
 
-  let results=loans.filter(l=>{
-    const it=items.find(i=>i.id===l.item_id);
-    const haystack=[
-      l.person_name, l.location, l.contact, l.notes, it?.name, it?.category
-    ].filter(Boolean).join(' ').toLowerCase();
-    return haystack.includes(q);
-  });
+  let results=[...loans];
 
+  // Apply text search if query exists
+  if(q){
+    results=results.filter(l=>{
+      const it=items.find(i=>i.id===l.item_id);
+      const haystack=[
+        l.person_name, l.location, l.contact, l.notes, it?.name, it?.category
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }
+
+  // Apply direction/status filter
   if(filter==='out')      results=results.filter(l=>l.direction==='out'&&!l.returned);
   if(filter==='in')       results=results.filter(l=>l.direction==='in'&&!l.returned);
+  if(filter==='cadet')    results=results.filter(l=>l.direction==='cadet'&&!l.returned);
   if(filter==='active')   results=results.filter(l=>!l.returned);
   if(filter==='returned') results=results.filter(l=>l.returned);
 
-  if(!results.length){ el.innerHTML='<div class="card"><div class="empty">No records found for "<strong>'+e(q)+'</strong>".</div></div>'; return; }
+  if(!results.length){
+    el.innerHTML='<div class="card"><div class="empty">No records found.</div></div>';
+    return;
+  }
 
   const tod=today();
-  let html=`<div class="card"><div class="card-head"><span class="card-title">${results.length} result${results.length>1?'s':''} for "${e(q)}"</span></div>
+  const title = q
+    ? `${results.length} result${results.length>1?'s':''} for "${e(q)}"${filter!=='all'?' · '+document.getElementById('global-search-filter').options[document.getElementById('global-search-filter').selectedIndex].text:''}`
+    : `${results.length} record${results.length>1?'s':''} · ${document.getElementById('global-search-filter').options[document.getElementById('global-search-filter').selectedIndex].text}`;
+
+  let html=`<div class="card"><div class="card-head"><span class="card-title">${title}</span></div>
   <div class="tbl-wrap"><table><thead><tr>
     <th>Item</th><th>Type</th><th>Party</th><th>Coy</th><th>Contact</th><th>Qty</th><th>Loan Date</th><th>Return By</th><th>Status</th><th></th>
   </tr></thead><tbody>`;
@@ -671,7 +736,7 @@ function runGlobalSearch(){
     const it=items.find(i=>i.id===l.item_id);
     html+=`<tr>
       <td class="td-n" style="cursor:pointer" onclick="openItem(${l.item_id})">${e(it?.name||'Unknown')}</td>
-      <td>${l.direction==='out'?'<span class="badge b-out">📤 Out</span>':'<span class="badge b-in">📥 In</span>'}</td>
+      <td>${l.direction==='out'?'<span class="badge b-out">📤 Loan Out</span>':l.direction==='cadet'?'<span class="badge b-cadet">🎖 Cadet Issue</span>':'<span class="badge b-in">📥 Borrow In</span>'}</td>
       <td class="td-n">${e(l.person_name)}</td>
       <td>${e(l.location||'—')}</td>
       <td class="td-s">${e(l.contact||'—')}</td>
@@ -764,12 +829,13 @@ function renderInventoryTable(){
 function renderItemDetail(itemId){
   const it=items.find(i=>i.id===itemId);
   if(!it){ document.getElementById('item-detail').innerHTML=''; return; }
-  const own=it.owned_qty, out=qtyOut(itemId), inn=qtyIn(itemId), store=qtyInStore(itemId);
+  const own=it.owned_qty, out=qtyOut(itemId), inn=qtyIn(itemId), cadet=qtyCadet(itemId), store=qtyInStore(itemId);
   const warn=store<0;
   const activeOut=loansFor(itemId,'out');
   const activeIn=loansFor(itemId,'in');
+  const activeCadet=loansFor(itemId,'cadet');
   const history=loans.filter(l=>l.item_id===itemId&&l.returned);
-  const pct=own>0?Math.min(100,Math.round(out/own*100)):0;
+  const pct=own>0?Math.min(100,Math.round((out+cadet)/own*100)):0;
 
   let html=`
   <div class="page-head">
@@ -780,6 +846,7 @@ function renderItemDetail(itemId){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn sm ghost" onclick="openEditItem(${it.id})">✏️ Edit</button>
       <button class="btn sm danger" onclick="deleteItem(${it.id})">🗑 Delete Item</button>
+      <button class="btn sm" style="background:#6d28d9;color:#fff;border-color:#6d28d9" onclick="openIssueCadet(${it.id})">🎖 Issue to Cadet</button>
       <button class="btn sm pri" onclick="openLoanOut(${it.id})">📤 Loan Out</button>
       <button class="btn sm pri" onclick="openBorrowIn(${it.id})">📥 Borrow In</button>
       <button class="btn sm" onclick="openExportModal(${it.id})">⬇️ Export</button>
@@ -788,6 +855,7 @@ function renderItemDetail(itemId){
 
   <div class="stock-strip">
     <div class="stock-box"><div class="stock-box-val">${own}</div><div class="stock-box-lbl">You Own</div></div>
+    <div class="stock-box"><div class="stock-box-val" style="color:#6d28d9">${cadet}</div><div class="stock-box-lbl">Issued to Cadets</div></div>
     <div class="stock-box"><div class="stock-box-val" style="color:var(--blue)">${out}</div><div class="stock-box-lbl">Loaned Out</div></div>
     <div class="stock-box"><div class="stock-box-val" style="color:var(--amb)">${inn}</div><div class="stock-box-lbl">Borrowed In</div></div>
     <div class="stock-box"><div class="stock-box-val" style="color:${warn?'var(--red)':store===0?'var(--amb)':'var(--green)'}">${store}</div><div class="stock-box-lbl">In Store</div></div>
@@ -800,9 +868,47 @@ function renderItemDetail(itemId){
       <div class="prog-bar-fill${pct>=90?' warn':''}" style="width:${pct}%"></div>
     </div>
   </div>
+  `;
 
-  <!-- LOANED OUT -->
-  <div class="card">
+  // ISSUED TO CADETS
+  html+=`<div class="card">
+    <div class="card-head">
+      <span class="card-title" style="color:#6d28d9">🎖 Issued to Cadets (${activeCadet.length} active)</span>
+      <button class="btn sm" style="background:#6d28d9;color:#fff;border-color:#6d28d9" onclick="openIssueCadet(${it.id})">＋ New Issue</button>
+    </div>`;
+  if(!activeCadet.length){
+    html+='<div class="empty">No items currently issued to cadets.</div>';
+  } else {
+    html+=`<div class="tbl-wrap"><table><thead><tr>
+      <th>Cadet Name</th><th>Platoon/Section</th><th>Contact</th><th>Qty</th><th>Issue Date</th><th>Return By</th><th>Status</th><th>Notes</th><th></th>
+    </tr></thead><tbody>`;
+    activeCadet.forEach(l=>{
+      const od=isOverdue(l);
+      // person_name=Cadet Name, contact=Rank, location=Platoon/Section, notes=Notes
+      const rank=l.contact||'—';
+      const platoon=l.location||'—';
+      const contactNum=l.notes2||'—';
+      html+=`<tr class="${od?'od-row':''}">
+        <td class="td-n">${e(l.person_name)}</td>
+        <td>${e(l.location||'—')}</td>
+        <td class="td-s">${e(l.contact||'—')}</td>
+        <td class="td-mono" style="font-weight:600;color:#6d28d9">${l.qty}</td>
+        <td>${l.loan_date}</td>
+        <td>${l.return_date||'Open'}</td>
+        <td>${statusBadge(l)}</td>
+        <td><div class="acts">
+          <button class="btn sm" onclick="openEditLoan(${l.id})">✏️</button>
+          <button class="btn ok" onclick="markReturned(${l.id})">✓ Done</button>
+          <button class="btn del" onclick="deleteLoan(${l.id})">✕</button>
+        </div></td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+  }
+  html+='</div>';
+
+  // LOANED OUT
+  html+=`<div class="card">
     <div class="card-head">
       <span class="card-title">📤 Loaned Out (${activeOut.length} active)</span>
       <button class="btn sm pri" onclick="openLoanOut(${it.id})">＋ New Loan</button>
@@ -882,7 +988,7 @@ function renderItemDetail(itemId){
     history.forEach(l=>{
       html+=`<tr>
         <td class="td-n">${e(l.person_name)}</td>
-        <td>${l.direction==='out'?'<span class="badge b-out">📤 Out</span>':'<span class="badge b-in">📥 In</span>'}</td>
+        <td>${l.direction==='out'?'<span class="badge b-out">📤 Loan Out</span>':l.direction==='cadet'?'<span class="badge b-cadet">🎖 Cadet Issue</span>':'<span class="badge b-in">📥 Borrow In</span>'}</td>
         <td class="td-mono">${l.qty}</td>
         <td>${l.loan_date}</td><td>${l.returned_on||'—'}</td>
         <td class="td-s">${e(l.notes||'—')}</td>
@@ -931,11 +1037,12 @@ function renderCalendar(){
     const isToday=dateStr===tod;
     const isSel=dateStr===calSelectedDate;
     let cls='cal-cell'+(evts.length?' has-events':'')+(isToday?' today-cell':'')+(isSel?' today-cell':'');
-    let inner=`<div class="cal-num">${d}</div>`;
-    evts.slice(0,3).forEach(ev=>{
+    let inner=`<div class="cal-num">${d}</div><div class="cal-dot-row">`;
+    evts.slice(0,6).forEach(ev=>{
       inner+=`<div class="cal-dot ${ev.type}" title="${e((ev.item?.name||''))} — ${e(ev.loan.person_name)}">${e(ev.item?.name||'?')}</div>`;
     });
-    if(evts.length>3) inner+=`<div class="cal-dot" style="color:var(--t3)">+${evts.length-3} more</div>`;
+    if(evts.length>6) inner+=`<div class="cal-dot" style="color:var(--t3);font-size:9px">+${evts.length-6}</div>`;
+    inner+='</div>';
     html+=`<div class="${cls}" onclick="calSelectDate('${dateStr}')">${inner}</div>`;
   }
 
@@ -985,10 +1092,12 @@ function renderCalEvents(selectedDate, eventMap, tod){
     const l=ev.loan; const it=ev.item;
     const dateShow=ev._date||l.return_date;
     const od=days(tod,dateShow)<0;
-    const typeLabel = od?'OVERDUE':l.direction==='out'?'COLLECT':'RETURN';
-    const typeClass  = od?'od':l.direction==='out'?'out':'in';
+    const typeLabel = od?'OVERDUE':l.direction==='out'?'COLLECT':l.direction==='cadet'?'COLLECT':'RETURN';
+    const typeClass  = od?'od':l.direction==='out'?'out':l.direction==='cadet'?'out':'in';
     const desc = l.direction==='out'
       ? `Lent ${l.qty}× to <strong>${e(l.person_name)}</strong>${l.location?' @ '+e(l.location):''}${l.contact?' · '+e(l.contact):''}`
+      : l.direction==='cadet'
+      ? `Lent ${l.qty}× to cadet <strong>${e(l.person_name)}</strong>${l.location?' · '+e(l.location):''}`
       : `Borrowed ${l.qty}× from <strong>${e(l.person_name)}</strong>${l.contact?' · '+e(l.contact):''}`;
     html+=`<div class="cal-event-row">
       <div class="cal-event-type ${typeClass}">${typeLabel}</div>
@@ -1020,7 +1129,7 @@ function goSec(sec,btn){
   if(sec==='search'){
     document.getElementById('global-search-input').value='';
     document.getElementById('global-search-filter').value='all';
-    document.getElementById('global-search-results').innerHTML='<div class="card"><div class="empty">Type a name, company, contact or item above to search.</div></div>';
+    document.getElementById('global-search-results').innerHTML='<div class="card"><div class="empty">Type a name, company, contact or item above to search — or select a filter to browse all records.</div></div>';
     setTimeout(()=>document.getElementById('global-search-input').focus(),100);
   }
 }
@@ -1141,6 +1250,39 @@ async function saveLoan(dir){
   render(); toast('✓ Saved');
 }
 
+function openIssueCadet(itemId){
+  document.getElementById('ic-item-id').value=itemId;
+  ['ic-name','ic-platoon','ic-contact','ic-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ic-qty').value='1';
+  document.getElementById('ic-date').value=today();
+  document.getElementById('ic-ret').value='';
+  openModal('modal-cadet');
+}
+
+async function saveIssueCadet(){
+  const itemId=parseInt(document.getElementById('ic-item-id').value);
+  const name=val('ic-name'), platoon=val('ic-platoon');
+  const qty=parseInt(val('ic-qty')||'0'), date=val('ic-date');
+  if(!name||!platoon||!qty||!date){ toast('Please fill in Name, Platoon and Date.'); return; }
+  const contactNum=val('ic-contact');
+  const notes=val('ic-notes');
+  const combinedNotes=[contactNum?'Contact: '+contactNum:'', notes].filter(Boolean).join(' | ')||null;
+  const row={
+    item_id:itemId, direction:'cadet', person_name:name,
+    contact:val('ic-contact')||null, location:platoon,
+    qty, loan_date:date, return_date:val('ic-ret')||null,
+    notes:combinedNotes, returned:false, returned_on:null
+  };
+  if(DEMO){ row.id=Date.now(); row.created_at=new Date().toISOString(); loans.unshift(row); persist(); }
+  else {
+    const{data,error}=await sb.from('loans').insert(row).select().single();
+    if(error){ toast('Error: '+error.message); return; }
+    loans.unshift(data);
+  }
+  closeModal('modal-cadet');
+  render(); toast('✓ Issued to cadet');
+}
+
 function openEditLoan(id){
   const l=loans.find(x=>x.id===id); if(!l) return;
   document.getElementById('el-id').value=id;
@@ -1151,8 +1293,8 @@ function openEditLoan(id){
   document.getElementById('el-date').value=l.loan_date||'';
   document.getElementById('el-ret').value=l.return_date||'';
   document.getElementById('el-notes').value=l.notes||'';
-  document.getElementById('edit-loan-title').textContent=l.direction==='out'?'✏️ Edit Loan Out':'✏️ Edit Borrow In';
-  document.getElementById('el-date-label').textContent=l.direction==='out'?'Loan Date *':'Received Date *';
+  document.getElementById('edit-loan-title').textContent=l.direction==='out'?'✏️ Edit Loan Out':l.direction==='cadet'?'✏️ Edit Cadet Issue':'✏️ Edit Borrow In';
+  document.getElementById('el-date-label').textContent=l.direction==='in'?'Received Date *':'Issue/Loan Date *';
   openModal('modal-edit-loan');
 }
 
@@ -1289,7 +1431,7 @@ function runExport(){
   if(incHist){
     const rows=loans.filter(l=>l.item_id===itemId&&l.returned&&inRange(l))
       .map(l=>({
-        'ID':l.id,'Direction':l.direction==='out'?'Loaned Out':'Borrowed In',
+        'ID':l.id,'Direction':l.direction==='out'?'Loaned Out':l.direction==='cadet'?'Cadet Issue':'Borrowed In',
         'Person':l.person_name,'Contact':l.contact||'',
         'Qty':l.qty,'Loan Date':l.loan_date,'Returned On':l.returned_on||'','Notes':l.notes||''
       }));
@@ -1304,19 +1446,6 @@ function runExport(){
   toast('✓ Excel file downloaded');
 }
 
-
-const APP_PASSWORD = 'ilovehotel6767';
-function checkPw(){
-  const input=document.getElementById('pw-input').value;
-  if(input===APP_PASSWORD){
-    document.getElementById('pw-screen').style.display='none';
-    boot();
-  } else {
-    document.getElementById('pw-error').style.display='block';
-    document.getElementById('pw-input').value='';
-    document.getElementById('pw-input').focus();
-  }
-}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </body>
